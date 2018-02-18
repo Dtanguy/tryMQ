@@ -1,0 +1,14 @@
+{
+  "name": "example",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dtanguy",
+  "license": "MIT",
+  "dependencies": {
+    "tryMQ-client": "git+https://github.com/Dtanguy/tryMQ-client.git"
+  }
+}

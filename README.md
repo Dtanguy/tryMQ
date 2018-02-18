@@ -3,7 +3,7 @@
 UDP message queue client
 
 
-```
+```js
 var modReq = require('tryMQ-client');
 var mod = new modReq();
 
