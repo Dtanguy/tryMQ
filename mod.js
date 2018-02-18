@@ -119,7 +119,7 @@ function mod() {
 
 			if(data.topic == '/SYS/exit' && data.for && data.for == myName) {
 				process.exit(1);
-			});
+			}
 			
 		});
 		
