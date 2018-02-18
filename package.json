@@ -1,0 +1,14 @@
+{
+  "name": "tryMQ-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "mod.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "dtanguy",
+  "license": "MIT",
+  "dependencies": {
+    "ws": "^4.0.0"
+  }
+}
