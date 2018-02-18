@@ -7,7 +7,12 @@ the broker is here : https://github.com/Dtanguy/tryMQ-broker
 var modReq = require('tryMQ-client');
 var mod = new modReq();
 
-mod.setup('SOMENODE', '127.0.0.1', connected, disconnected);
+var setting = {
+	brokerAdrr : '127.0.0.1',
+	port	   : 33333
+}
+
+mod.setup('SOMENODE', setting, connected, disconnected);
 function connected(){
 	mod.log('Connected!');
 }
