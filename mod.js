@@ -113,9 +113,13 @@ function mod() {
 				}	
 			}
 			
-			if(data.topic == '/LOOP/change' && data.for == clientId){
+			if(data.topic == '/LOOP/change' && data.for && data.for == clientId){
 				changeLoopFreq(data);
-			}			
+			}	
+
+			if(data.topic == '/SYS/exit' && data.for && data.for == myName) {
+				process.exit(1);
+			});
 			
 		});
 		
