@@ -39,7 +39,7 @@ function mod() {
 	
 	/*************************************************** Core function **********************************************/
 	
-	this.setup = function(nm, ip, coCall, decoCall, errcb) {
+	this.setup = function(nm, sett, coCall, decoCall, errcb) {
 		set = true;
 		
 		errorCb = errcb;
