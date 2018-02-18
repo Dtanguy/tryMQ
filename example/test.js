@@ -1,8 +1,6 @@
 var modReq = require('tryMQ-client');
 var mod = new modReq();
 
-//var tryMQsetting = require('../config').tryMQ;
-
 var setting = {
 	brokerAdrr : '127.0.0.1',
 	port	   : 33333

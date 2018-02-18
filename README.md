@@ -1,7 +1,7 @@
 # tryMQ-client
 
-UDP message queue client
-the broker is here : https://github.com/Dtanguy/tryMQ-broker
+UDP message queue client  
+the broker is here : https://github.com/Dtanguy/tryMQ-broker  
 
 ```js
 var modReq = require('tryMQ-client');
