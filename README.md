@@ -1,4 +1,6 @@
-# tryMQ-client
+# tryMQ
+
+## Client
 
 UDP message queue client  
 the broker is here : https://github.com/Dtanguy/tryMQ-broker  
@@ -33,3 +35,5 @@ mod.subscribe('/TOPIC2/subtopic2', function (msg) {
 	mod.log('I receive that ! : ', msg);
 });
 ```
+
+## Broker
