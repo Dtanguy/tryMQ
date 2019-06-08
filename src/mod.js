@@ -102,7 +102,7 @@ function mod() {
 	
 	//Specifique send instruction
 	function send(data, txt){
-		var message = new Buffer(txt);			
+		var message = new Buffer.alloc(txt.length, txt);			
 		client.send(message, 0, message.length, setting.port, setting.brokerIp, function(err, bytes) {
 			//The message have been send
 		});	
