@@ -1,29 +1,28 @@
-var tryMQReq = require('../src/mod.js');
+var tryMQReq = require('tryMQ');
 var tryMQ = new tryMQReq();
 
 var config = {
 	port 		: 33333,
 	brokerIp 	: '127.0.0.1',
-	pswrd 		: 'hey!'
+	pswrd 		: 'your_password!'
 };
 
-tryMQ.setup('EXAMPLE', config, connected, disconnected);
+tryMQ.setup('MY_MODULE', config, connected, disconnected);
 
 function connected(adrr){
-	tryMQ.log('Ready :D');
+	console.log('Ready :D');
 }
 
 function disconnected(){
-	tryMQ.log('Disonnected !');
+	console.log('Disonnected !');
 }
 
-tryMQ.subscribe('/hey', function (msg) {
-	tryMQ.log(msg); 
+// Subscribe '/TOPIC/subtopic' message
+mod.subscribe('/TOPIC/subtopic', function (msg) {
+	console.log('Receive  : ', msg);
 });
 
-
-// Publish on /blabla every second
 setInterval(function(){
-	var to_send = {msg: "plop !"};
-	tryMQ.publish('/blabla', to_send);
+	var msg = {data: 'hello !'};
+	mod.publish('/TOPIC/subtopic', msg);
 }, 1000);

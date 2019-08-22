@@ -10,7 +10,7 @@ Modules (clients) are connected to a core (broker) and they exchange JSON messag
 </p>
 
 <br>
-I use it for experiment with subjects like distributed architecture, multiple brokers comunication, dynamical load management.
+I use it for experiment with subjects like distributed architecture, multiple brokers comunication or dynamical load management.
 <br>
 <br>
 You can find compatible modules here : [/url]
@@ -23,34 +23,34 @@ You can find compatible modules here : [/url]
 UDP message queue client 
 
 ```js
-var modReq = require('tryMQ-client');
-var mod = new modReq();
+var tryMQReq = require('tryMQ');
+var tryMQ = new tryMQReq();
 
-var setting = {
-	brokerAdrr : '127.0.0.1',
-	port	   : 33333
+var config = {
+	port 		: 33333,
+	brokerIp 	: '127.0.0.1',
+	pswrd 		: 'your_password!'
+};
+
+tryMQ.setup('MY_MODULE', config, connected, disconnected);
+
+function connected(adrr){
+	console.log('Ready :D');
 }
 
-mod.setup('MY_MODULE', setting, connected, disconnected);
-function connected(){
-	console.log('Connected!');
-}
 function disconnected(){
-	console.log('Disonnected!');
+	console.log('Disonnected !');
 }
 
+// Subscribe '/TOPIC/subtopic' message
+mod.subscribe('/TOPIC/subtopic', function (msg) {
+	console.log('Receive  : ', msg);
+});
 
-setInterval(function() { 
-	var msg = {
-		data: 'hello !'
-	};
+setInterval(function(){
+	var msg = {data: 'hello !'};
 	mod.publish('/TOPIC/subtopic', msg);
 }, 1000);
-
-
-mod.subscribe('/TOPIC2/subtopic2', function (msg) {
-	console.log('I receive that ! : ', msg);
-});
 ```
 
 ## Core (Broker side)
@@ -58,34 +58,36 @@ mod.subscribe('/TOPIC2/subtopic2', function (msg) {
 UDP message queue broker
 
 ```js
-var setting = {
+var coreReq = require('./tryMQ/src/core.js');
+var core = new coreReq();
+
+var config = {
 	portUDP 	: 33333,
-	brokerIpUDP	: ['127.0.0.1', 'ip_of_the_broker'],
+	brokerIpUDP : ['127.0.0.1', '192.168.1.17'],
 	portWS 		: 8080,
 	brokerIpWS 	: '127.0.0.1',
-	pswrd 		: 'your_password'
-}
+	pswrd 		: 'your_password!'
+};
 
-// Start and keep core process
-var coreReq = require(config.appPath.core);
-var core = new coreReq();
-core.setup('CORE', setting, coreError);
+// Start Core
+core.setup('CORE', config, coreError);
 
-// Every message end here
+// Subscribe to all messages
 core.subscribe('/CORE/all', function (msg) {
-	console.log(msg);
+	core.log(msg);
 });
 
-// Only '/TOPIC/subtopic' message here
+// Subscribe '/TOPIC/subtopic' messages
 core.subscribe('/TOPIC/subtopic', function (msg) {
 	console.log(msg);
 });
 
+// In case of error
 function coreError(err, code){
 	if(code == 0){
-		console.warn(err);
+		core.warn(err);
 	}else{
-		console.error(err);
+		core.error(err);
 	}
 };
 ```
