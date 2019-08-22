@@ -10,8 +10,8 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-	"nodeColor": "git+https://github.com/Dtanguy/nodeColor.git"
-  }, 
+    "nodeColor": "git+https://github.com/Dtanguy/nodeColor.git"
+  },
   "author": "",
   "license": "ISC"
 }
