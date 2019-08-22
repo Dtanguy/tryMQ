@@ -1,25 +1,26 @@
 function mod() {
 	
-	var dgram = require('dgram');
-	var shared = require('./shared');
+	let dgram = require('dgram');
+	let sharedReq = require('./shared');
+	let shared = new sharedReq();
 	
 	//Golbal (default setting)
-	var setting = {
+	let setting = {
 		brokerIp : '127.0.0.1',
 		port	 : 33333,
 		pswrd	 : ''
 	};
 	
-	var verbose = true;	
-	var set = false;
+	let verbose = true;	
+	let set = false;
 	
 	//Network and subscribtion
-	var client;	
-	var coCb, decoCb, errorCb;
-	var autoRecoTimeOut = 2000;
-	var token = -1;
-	var lastPing = -1;
-	var timeOut = 5000;
+	let client;	
+	let coCb, decoCb, errorCb;
+	let autoRecoTimeOut = 2000;
+	let token = -1;
+	let lastPing = -1;
+	let timeOut = 5000;
 
 	//Initialize a client
 	this.setup = function(id, sett, coCb_, decoCb_, errorCb_) {
@@ -63,7 +64,7 @@ function mod() {
 		//Incoming messages
 		client.on('message', (message, remote) => {
 			lastPing = Date.now();
-			var data = shared.incomingMsg(message, remote);
+			let data = shared.incomingMsg(message, remote);
 			if(!data){
 				return;
 			}
@@ -79,7 +80,8 @@ function mod() {
 			}		
 			if(data.topic == '/CORE/ping' && data.ask==true){
 				//shared.publish('/CORE/ping', {});
-				this.publish('/CORE/ping', {});
+				//console.log("send back ping " + data.from);
+				this.publish('/CORE/ping', {rep: true});
 			}			
 			if(data.topic == '/LOOP/change' && data.for && data.for == shared.id()){
 				changeLoopFreq(data);
@@ -102,7 +104,7 @@ function mod() {
 	
 	//Specifique send instruction
 	function send(data, txt){
-		var message = new Buffer.alloc(txt.length, txt);			
+		let message = new Buffer.alloc(txt.length, txt);			
 		client.send(message, 0, message.length, setting.port, setting.brokerIp, function(err, bytes) {
 			//The message have been send
 		});	
@@ -154,8 +156,8 @@ function mod() {
 	
 	/*************************************************** Custom Loop **********************************************/
 	
-	var loopCb, loopMin, loopMax, loopCurrent;
-	var intervalLoop;
+	let loopCb, loopMin, loopMax, loopCurrent;
+	let intervalLoop;
 	
 	this.loop = function(min, max, callback) {		
 		loopCb = callback;
@@ -179,9 +181,9 @@ function mod() {
 	
 	/***************************************** SHARED **********************************************/
 	
-	this.publish = function(topic, msg){	
+	this.publish = function(topic, msg, add){	
 		msg.token = token;
-		return shared.publish(topic, msg);
+		return shared.publish(topic, msg, add);
 	};
 	
 	this.subscribe = function(topic, callback){	

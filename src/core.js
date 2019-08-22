@@ -1,15 +1,16 @@
 function core() {
 	
-	//var os = require('os');
-	var Buffer = require('buffer').Buffer;
-	var dgram = require('dgram');
-	var crypto = require('crypto');
-	var WebSocketServer = require('ws').Server;
-	var shared = require('./shared');
+	//let os = require('os');
+	let Buffer = require('buffer').Buffer;
+	let dgram = require('dgram');
+	let crypto = require('crypto');
+	let WebSocketServer = require('ws').Server;
+	let sharedReq = require('./shared');
+	let shared = new sharedReq();
 	
-	var param = {};
-	var server = {};	
-	var errorCb;
+	let param = {};
+	let server = {};	
+	let errorCb;
 
 	//Initialize a broker	
 	this.setup = function(id_, param_, errorCb_) {
@@ -21,12 +22,13 @@ function core() {
 		console['log']("Started " + shared.id());
 		loop();
 
-		//Init all the server found in the config
+		//Init UDP server found in the config
 		if(param.portUDP && param.brokerIpUDP){
 			for(i = 0; i < param.brokerIpUDP.length; i++){
 				this.initUDP(param.portUDP, param.brokerIpUDP[i]);
 			}
-		}
+		}		
+		// Init websocket server found in the config
 		if(param.portWS &&  param.brokerIpWS){
 			this.initWS(param.portWS, param.brokerIpWS);
 		}
@@ -60,16 +62,16 @@ function core() {
 	/*************************************************** UDP **********************************************/
 	this.initUDP = function(port, brokerIp) {
 		
-		var id = crypto.randomBytes(8).toString('hex');
+		let id = crypto.randomBytes(8).toString('hex');
 		server[id] = dgram.createSocket('udp4');
 
 		server[id].on('listening', function () {
-			var address = server[id].address();
+			let address = server[id].address();
 			console['log']('TryMQ UDP broker listening on ' + address.address + ":" + address.port);
 		});
 
 		server[id].on('message', function (message, remote) {			
-			var meta = {
+			let meta = {
 				id: 		id,
 				type: 		"udp",
 				address: 	remote.address,
@@ -95,7 +97,7 @@ function core() {
 	/*************************************************** WS **********************************************/
 	this.initWS = function(portWS, brokerIp) {		
 		
-		var wss = new WebSocketServer({port: portWS});	
+		let wss = new WebSocketServer({port: portWS});	
 		
 		wss.on('listening', function(ws) {
 			console['log']('TryMQ WS broker listening on ' + brokerIp + ":" + portWS);
@@ -103,11 +105,11 @@ function core() {
 
 		wss.on('connection', function(ws, req) {
 			console['log']('TryMQ WS new connection ' + req.connection.remoteAddress + ":" + portWS);
-			var id = crypto.randomBytes(8).toString('hex');
+			let id = crypto.randomBytes(8).toString('hex');
 			server[id] = ws;
 			
 			server[id].on('message', function(message) {
-				var meta = {
+				let meta = {
 					id: 		id,
 					type: 		"ws",
 					address: 	req.connection.remoteAddress.replace('::ffff:',''),
@@ -135,19 +137,19 @@ function core() {
 	
 	/*************************************************** GLOBAL **********************************************/
 	
-	var clients = {};
-	var topics = {};
+	let clients = {};
+	let topics = {};
 	
-	var verbose = false;
-	var loopFreq = 50;
-	var Queue = {};
+	let verbose = false;
+	let loopFreq = 50;
+	let Queue = {};
 
 	//login + mdp = token = identification
 	function newMessage(message, meta){
 				
-		var data = shared.incomingMsg(message, meta);
+		let data = shared.incomingMsg(message, meta);
 		if(!data){
-			upError('Empty parse result', 0)
+			upError('Empty parse result', 0);
 			return;
 		}
 				
@@ -213,52 +215,74 @@ function core() {
 			if(data.topic == '/login'){
 				if(data.pswrd && data.from){
 					if(data.pswrd == param.pswrd){
-						var msg = {};
+						let msg = {};
 						msg.token = crypto.randomBytes(8).toString('hex');
 						msg.for = data.from;
 						shared.publish('/login', msg);
 						clients[data.from].token = msg.token;
 					}
-				}
-			//Manage ping			
-			}else{			
+				}		
+			}else{	
+				
+				// If auth is a success
 				if(data.token == clients[data.from].token){
-					delete data.token;
-					shared.publish(data.topic, data, true);
-				}else{
+					// Remove token and propage message
+					delete data.token;	
+				}
+				
+				// If auth fail
+				else{
 					upError('INVALID TOKEN from ' + data.from + ' on ' + data.topic, 0)
-					var msg = {};
+					let msg = {};
 					msg.for = data.from;
 					shared.publish('/invalid', msg);
+					return;
 				}
+				
+				//CORE cmd
+				let normal = false;
+				if(data.ask){	
+					let msg = {}
+					switch(data.topic) {
+						//case '/CORE/ping':
+							//shared.publish('/CORE/ping', {});
+							//normal = true;
+							//break;
+						case '/CORE/info':
+							msg.clients = clients;
+							msg.topics = topics;
+							shared.publish('/CORE/info', msg);
+							break;
+						case '/CORE/clients':
+							msg.clients = clients;
+							shared.publish('/CORE/clients', msg);
+							break;
+						case '/CORE/topics':
+							msg.topics = topics;
+							shared.publish('/CORE/topics', msg);
+							break;
+						default:
+							normal = true;
+							//return;
+					}			
+				}else{
+					normal = true;
+				}
+				
+				// Just relay normal message (typical case)
+				if(normal){
+					if(data.topic == '/CORE/ping' && data.rep == true){
+						console.log("IT HERE");
+					}
+					shared.publish(data.topic, data, true);
+				}
+		
 			}
-						
+			
 		}catch(err){
 			upError(err, 1);
-		}
-		
-		//CORE cmd
-		if(data.ask){	
-			var msg = {}
-			switch(data.topic) {
-				case '/CORE/info':
-					msg.clients = clients;
-					msg.topics = topics;
-					shared.publish('/CORE/info', msg);
-					break;
-				case '/CORE/clients':
-					msg.clients = clients;
-					shared.publish('/CORE/clients', msg);
-					break;
-				case '/CORE/topics':
-					msg.topics = topics;
-					shared.publish('/CORE/topics', msg);
-					break;
-				default:
-					return;
-			}			
-		}
-		
+			return;
+		}		
 	};
 
 	
@@ -268,15 +292,21 @@ function core() {
 	function propage(data){
 		try {	
 
-			var txt = JSON.stringify(data.d);
-			var msg = new Buffer(data.m); 
+			let txt = JSON.stringify(data.d);
+			let msg = new Buffer(data.m); 
 			
-			for(var cli in clients) {
+			for(let cli in clients) {
 				
+				// If message have an explicit for destination, skip all the other cli
 				if(data.d.for){
 					if(cli != data.d.for){
 						continue;
 					}
+				}
+				
+				// Dont send a message to the one who send it
+				if(cli == data.d.from){
+					continue;
 				}
 				
 				if(clients[cli].id && clients[cli].type && server[clients[cli].id]){
@@ -312,18 +342,15 @@ function core() {
 		}
 	};
 
-	var pingTimeout = 4000;
+	let pingTimeout = 4000;
 	setInterval(function() { 
-		for(var cli in clients) {
+		for(let cli in clients) {
 			if (Date.now() - clients[cli].lastPing > pingTimeout){
 				console['warn']("Client " + cli + " ping timeout, remove");
 				delete clients[cli];
 			}
 		}
-		var msg = {
-			ask: true
-		};
-		shared.publish('/CORE/ping', msg);
+		shared.publish('/CORE/ping', {ask: true});
 	}, pingTimeout);
 
 	
@@ -333,7 +360,7 @@ function core() {
 	
 	function loop() {
 		setTimeout(function() {
-			for(var ms in Queue){	
+			for(let ms in Queue){	
 				propage(Queue[ms]);	
 			}
 			Queue = {};

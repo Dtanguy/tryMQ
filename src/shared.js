@@ -1,22 +1,22 @@
-var os = require('os');
-var net = require('net');
+function shared() {
+	
+	let os = require('os');
+	let net = require('net');
 
-//Info
-var name       = 'noName';
-var id         = 'noName-12345';
-var hostname   = os.hostname();
-var ip         = -1; 
-var startTime  = Date.now();  
+	//Info
+	let name       = 'noName';
+	let id         = 'noName-12345';
+	let hostname   = os.hostname();
+	let ip         = -1; 
+	let startTime  = Date.now();  
 
-//Connection
-var subscribed = {};
-var connected  = false;
-var errorCb, sendCb;
-
-module.exports = {
+	//Connection
+	let subscribed = {};
+	let connected  = false;
+	let errorCb, sendCb;
 	
 	//Set callback and generate ID
-	init: function(name_, errorCb_, sendCb_){
+	this.init = function(name_, errorCb_, sendCb_){
 		
 		errorCb = errorCb_;
 		sendCb = sendCb_;
@@ -30,8 +30,9 @@ module.exports = {
 		id = name + '-' + Math.random().toString(16).substr(2, 8);	
 		
 		// Find my own ip
+		let socket;
 		try {
-			var socket = net.createConnection(80, 'www.google.com');
+			socket = net.createConnection(80, 'www.google.com');
 		} catch (e) {
 			errorCb('Can\'t get my own IP ' + e, 0);
 		}
@@ -43,7 +44,7 @@ module.exports = {
 			errorCb('Error in socket ' + e, 0);
 		});
 
-	},
+	};
 	
 	
 	
@@ -52,10 +53,17 @@ module.exports = {
 	
 	
 	//Parse message
-	incomingMsg: function(message, remote){
+	this.incomingMsg = function(message, remote){
 		
 		//parse
-		var msg = JSON.parse(message);
+		let msg = {};
+		try{
+			msg = JSON.parse(message);
+		}catch(err){
+			errorCb('Error JSON.pase fail', 0);
+			return;
+		}
+		
 		if (!msg.topic){
 			errorCb('No topic', 0);
 			return;
@@ -94,10 +102,10 @@ module.exports = {
 		}
 		
 		return msg;
-	},
+	};
 	
 	//Manage subscription
-	redirect: function(msg){
+	this.redirect = function(msg){
 		if(subscribed[msg.topic] && msg.from != id){				
 			try {
 				subscribed[msg.topic](msg);
@@ -105,23 +113,24 @@ module.exports = {
 				errorCb(e, 0);
 			}
 		}
-	},	
+	};
 	
 	// setter / getter conenction state
-	setCo: function(bool){
+	this.setCo = function(bool){
 		connected = bool;	
-	},
-	getCo: function(){
+	};
+	
+	this.getCo = function(){
 		return connected;	
-	},
+	};
 	
 	//Publish messages
-	publish: function(topic, msg, add){	
+	this.publish = function(topic, msg, add){	
 		
 		if(!msg || !topic || !connected){			
 			return;
 		}
-		
+
 		try {
 			delete msg.port;
 			delete msg.address;
@@ -131,70 +140,71 @@ module.exports = {
 				msg.hostname = hostname;
 				msg.ip = ip;
 			}
-			var txt = JSON.stringify(msg);
+			let txt = JSON.stringify(msg);
 			//console.log(msg);
 			sendCb(msg, txt);					
 		}catch(e){
 			errorCb(e, 0);
 		}
-	},
+	};
 	
 
 	//Subscribe to topics
-	subscribe: function(topic, callback){	
+	this.subscribe = function(topic, callback){	
 		if(!topic || !callback){
 			return;
 		}
 		subscribed[topic] = callback;	
-	},	
+	};	
 	
-	unsubscribe: function(topic){
+	this.unsubscribe = function(topic){
 		subscribed[topic] = '';	
-	},
+	};
 	
-	subscribtion: function(){
+	this.subscribtion = function(){
 		return subscribed;
-	},
+	};
 	
-	name: function(){
+	this.name = function(){
 		return name;
-	},
+	};
 	
-	id: function() {
+	this.id = function() {
 		return id;
-	},
+	};
 	
-	hostname: function() {
+	this.hostname = function() {
 		return hostname;
-	},
+	};
 	
-	ip: function(){
+	this.ip = function(){
 		return ip;
-	},
+	};
 	
-	upTime: function(){
+	this.upTime = function(){
 		return Date.now() - startTime;
-	},
+	};
  	
 	
 	//Somes color on the log
-	error: function(txt) {
+	this.error = function(txt) {
 		//this.publish('/ERROR', {err: txt});
 		console['error'](txt);	
-	},
+	};
 	
-	warn: function(txt) {
+	this.warn = function(txt) {
 		//this.publish('/WARN', {warn: txt});
 		console['warn'](txt);	
-	},
+	};
 	
-	log: function(txt) {
+	this.log = function(txt) {
 		//this.publish('/LOG', {log: txt});
 		console['log'](txt);
-	}
+	};
   
-};
+}
 
+module.exports = shared;
 
 // Some color
 [
@@ -202,6 +212,6 @@ module.exports = {
 	[ 'error', '\x1b[31m' ],
 	[ 'log',   '\x1b[2m'  ]
 ].forEach(function(pair) {
-	var method = pair[0], reset = '\x1b[0m', color = '\x1b[36m' + pair[1];
+	let method = pair[0], reset = '\x1b[0m', color = '\x1b[36m' + pair[1];
 	console[method] = console[method].bind(console, color, method.toUpperCase(), reset);
 });	
