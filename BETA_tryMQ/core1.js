@@ -1,5 +1,5 @@
 /************************************************ CONFIG & BASE CORE *********************************************/
-let color = require('./lib/color');
+let color = require('./nodeColor');
 
 //Load config file
 var config = require('./config1');

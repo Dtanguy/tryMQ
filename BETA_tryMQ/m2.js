@@ -1,4 +1,4 @@
-let color = require('./lib/color');
+let color = require('./nodeColor');
 
 var config = require('./config1');
 var tryMQReq = require(config.appPath.cli);
