@@ -6,10 +6,9 @@ Modules (clients) are connected to a core (broker) and they exchange JSON messag
 /!\ If you are looking for a stable and reliable message queue, look to existing one like rabbitMQ or ROS.<br>
 /!\ TryMQ is made for tests and break things
 <p align="center">
-	<img src="https://raw.githubusercontent.com/dtanguy/tryMQ/master/img/crash_logo2.png" width="60%">
+	<img src="https://raw.githubusercontent.com/dtanguy/tryMQ/master/img/crash_logo2.png" width="50%">
 </p>
 
-<br>
 I use it for experiment with subjects like distributed architecture, multiple brokers comunication or dynamical load management.
 <br>
 <br>
