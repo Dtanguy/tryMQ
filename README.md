@@ -1,15 +1,18 @@
 # tryMQ
 
-TryMQ is a custom message queue, based on UDP comunication.<br>
+TryMQ is a custom message queue, based on UDP communication.<br>
 Modules (clients) are connected to a core (broker) and they exchange JSON messages on topics.
 
-/!\ If you are looking for a stable and reliable message queue, look to existing one like rabbitMQ or ROS.
+/!\ If you are looking for a stable and reliable message queue, look to existing one like rabbitMQ or ROS.<br>
 /!\ TryMQ is made for experiemnt and break things
 <p align="center">
 	<img src="https://raw.githubusercontent.com/dtanguy/tryMQ/master/img/crash_logo2.png" width="60%">
 </p>
 
-I use it for experiment with subjects like distributed architecture, multiple brokers comunication, dynamical load management..
+<br>
+I use it for experiment with subjects like distributed architecture, multiple brokers comunication, dynamical load management.
+<br>
+<br>
 You can find compatible modules here : [/url]
 
 
