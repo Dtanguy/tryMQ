@@ -1,6 +1,20 @@
 # tryMQ
 
-## Client
+TryMQ is a custom message queue, based on UDP comunication.
+Modules (clients) are connected to a core (broker) and they exchange JSON messages on topics.
+
+/!\ If you are looking for a stable and reliable message queue, you better gotta look to existing message queue like rabbitMQ or ROS.
+<p align="center">
+	<img src="https://raw.githubusercontent.com/dtanguy/tryMQ/img/crash_logo2.png" width="60%">
+</p>
+
+
+I made this for experiment with subjects like distributed architecture, multiple brokers comunication, dynamical load management..
+
+
+# Usage:
+
+## Module (Client side)
 
 UDP message queue client 
 
@@ -13,12 +27,12 @@ var setting = {
 	port	   : 33333
 }
 
-mod.setup('SOMENODE', setting, connected, disconnected);
+mod.setup('MY_MODULE', setting, connected, disconnected);
 function connected(){
-	mod.log('Connected!');
+	console.log('Connected!');
 }
 function disconnected(){
-	mod.log('Disonnected!');
+	console.log('Disonnected!');
 }
 
 
@@ -31,18 +45,18 @@ setInterval(function() {
 
 
 mod.subscribe('/TOPIC2/subtopic2', function (msg) {
-	mod.log('I receive that ! : ', msg);
+	console.log('I receive that ! : ', msg);
 });
 ```
 
-## Broker
+## Core (Broker side)
 
 UDP message queue broker
 
 ```js
 var setting = {
 	portUDP 	: 33333,
-	brokerIpUDP : ['127.0.0.1', 'ip_of_the_broker'], //Local and external connection
+	brokerIpUDP	: ['127.0.0.1', 'ip_of_the_broker'],
 	portWS 		: 8080,
 	brokerIpWS 	: '127.0.0.1',
 	pswrd 		: 'your_password'
@@ -53,24 +67,21 @@ var coreReq = require(config.appPath.core);
 var core = new coreReq();
 core.setup('CORE', setting, coreError);
 
+// Every message end here
 core.subscribe('/CORE/all', function (msg) {
-	core.log(msg);
+	console.log(msg);
+});
+
+// Only '/TOPIC/subtopic' message here
+core.subscribe('/TOPIC/subtopic', function (msg) {
+	console.log(msg);
 });
 
 function coreError(err, code){
 	if(code == 0){
-		core.warn(err);
+		console.warn(err);
 	}else{
-		core.error(err);
-		
-		if(JSON.stringify(err).indexOf('bind EADDRINUSE')){
-			console.warn('AUTO DEBUG /!\\ POTENTIAL RISK OF DATA LOST');
-			//Kill node process except me
-			/*
-			var core = new coreReq();
-			core.setup('DEUS', config.core, coreError);
-			*/
-		}
+		console.error(err);
 	}
 };
 ```
