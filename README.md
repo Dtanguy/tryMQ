@@ -9,7 +9,7 @@ Modules (clients) are connected to a core (broker) and they exchange JSON messag
 	<img src="https://raw.githubusercontent.com/dtanguy/tryMQ/master/img/crash_logo2.png" width="50%">
 </p>
 
-I use it for experiment with subjects like distributed architecture, multiple brokers comunication or dynamical load management.
+I use it for experiment with subjects like distributed architecture, multiple brokers communication or dynamical load management.
 <br>
 <br>
 You can find compatible modules here : [/url]
