@@ -181,22 +181,22 @@ module.exports = {
 	//Somes color on the log
 	error: function(txt) {
 		//this.publish('/ERROR', {err: txt});
-		console['error'](txt);	
+		console.error(txt);	
 	},
 	
 	warn: function(txt) {
 		//this.publish('/WARN', {warn: txt});
-		console['warn'](txt);	
+		console.warn(txt);	
 	},
 	
 	log: function(txt) {
 		//this.publish('/LOG', {log: txt});
-		console['log'](txt);
+		console.log(txt);
 	}
   
 };
 
-
+/*
 // Some color
 [
 	[ 'warn',  '\x1b[35m' ],
@@ -205,4 +205,4 @@ module.exports = {
 ].forEach(function(pair) {
 	var method = pair[0], reset = '\x1b[0m', color = '\x1b[36m' + pair[1];
 	console[method] = console[method].bind(console, color, method.toUpperCase(), reset);
-});	
+});	*/
