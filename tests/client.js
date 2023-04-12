@@ -1,5 +1,6 @@
-var config = require('./config.js');
-var tryMQ = require('../src/client/client.js');
+const config = require('./config.js');
+const logger = require('./logger.js');
+const tryMQ = require('../src/client/client.js');
 
 function connected() {
 	console.log('Ready :D');

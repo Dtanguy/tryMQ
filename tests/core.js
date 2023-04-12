@@ -1,5 +1,6 @@
-var config = require('./config.js');
-var core = require('../src/core/core.js');
+const config = require('./config.js');
+const logger = require('./logger.js');
+const core = require('../src/core/core.js');
 
 // Start Core
 core.setup('CORE', config.core, coreError);

@@ -5,7 +5,6 @@ var crypto = require('crypto');
 var listenerUDP = require('../core/listenerUDP.js');
 var listenerWS = require('../core/listenerWS.js');
 var common = require('../common.js');
-const logger = require('../logger.js');
 
 var param = {};
 var server = {};

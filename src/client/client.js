@@ -2,7 +2,7 @@
 const clientUDP = require('./clientUDP.js');
 const clientWS = require('./clientWS.js');
 const common = require('../common.js');
-const logger = require('../logger.js');
+
 
 //Golbal (default setting)
 var setting = {
