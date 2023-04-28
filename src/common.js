@@ -21,12 +21,8 @@ const init = function (name_, errorCb_, sendCb_) {
 	errorCb = errorCb_;
 	sendCb = sendCb_;
 	connected = false;
-	if (name_ != '') {
-		name = name_;
-	} else {
-		name = 'noName';
-	}
-
+	if (!name_) name_ = 'noName';
+	name = name_;
 	id = name + '-' + Math.random().toString(16).substr(2, 8);
 
 	// Find my own ip
@@ -66,17 +62,19 @@ const incomingMsg = function (message, remote) {
 		return;
 	}
 
-	if (remote.address) {
-		msg.address = remote.address;
+	if (remote) {
+		if (remote.address) {
+			msg.address = remote.address;
+		}
+		if (remote.port) {
+			msg.port = remote.port;
+		}
+		/*
+		if(remote.id){
+			msg.id = remote.id;
+		}
+		*/
 	}
-	if (remote.port) {
-		msg.port = remote.port;
-	}
-	/*
-	if(remote.id){
-		msg.id = remote.id;
-	}
-	*/
 	if (!msg.topic[msg.topic]) {
 		msg.topic[msg.topic] = '';
 	}
@@ -161,9 +159,6 @@ const upTime = function () {
 }
 
 
-
-
-
 module.exports = {
 	init: init,
 	incomingMsg: incomingMsg,
@@ -174,9 +169,9 @@ module.exports = {
 	subscribe: subscribe,
 	unsubscribe: unsubscribe,
 	subscribtion: subscribed,
-	name: name,
-	id: id,
-	hostname: hostname,
-	ip: ip,
-	upTime: upTime,
+	name: () => name,
+	id: () => id,
+	hostname: () => hostname,
+	ip: () => ip,
+	upTime: () => Date.now() - startTime,
 };

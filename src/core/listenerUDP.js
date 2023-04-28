@@ -1,4 +1,3 @@
-
 const dgram = require('dgram');
 
 const initUDP = function (port, brokerIp, id, newMessage, upError) {
@@ -6,7 +5,7 @@ const initUDP = function (port, brokerIp, id, newMessage, upError) {
 
 	server.on('listening', () => {
 		var address = server.address();
-		console['log']('TryMQ UDP broker listening on ' + address.address + ":" + address.port);
+		console.log('TryMQ UDP broker listening on ' + address.address + ":" + address.port);
 	});
 
 	server.on('message', (message, remote) => {
@@ -25,7 +24,7 @@ const initUDP = function (port, brokerIp, id, newMessage, upError) {
 	});
 
 	server.on('close', () => {
-		console['log']('CLOSE UDP');
+		console.log('CLOSE UDP');
 	});
 
 	server.bind(port, brokerIp);

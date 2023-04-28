@@ -1,38 +1,42 @@
 const WebSocketServer = require('ws').Server;
+var crypto = require('crypto');
 
-const initWS = function (portWS, brokerIp, id, newMessage, upError) {
+
+const initWS = function (portWS, brokerIp, id_, newMessage, upError, add) {
 	var wss = new WebSocketServer({ port: portWS });
-	var server = null;
+
 
 	wss.on('listening', (ws) => {
-		console['log']('TryMQ WS broker listening on ' + brokerIp + ":" + portWS);
+		console.log('TryMQ WS broker listening on ' + brokerIp + ":" + portWS);
 	});
 
 	wss.on('connection', (ws, req) => {
-		console['log']('TryMQ WS new connection ' + req.connection.remoteAddress + ":" + portWS);
-		server = ws;
-
-		server.on('message', (message) => {
+		var id = crypto.randomBytes(8).toString('hex');
+		let ip = req.connection.remoteAddress.replace('::ffff:', '');
+		console.log('TryMQ WS new connection ' + ip + ":" + portWS);
+		add({ id, ws });
+		ws.on('message', (message) => {
 			var meta = {
-				id,
+				id: id,
 				type: "ws",
-				address: req.connection.remoteAddress.replace('::ffff:', ''),
-				ip: req.connection.remoteAddress.replace('::ffff:', ''),
+				address: ip,
+				ip: ip,
 				port: portWS
 			};
+			console.log('meta.id: ' + meta.id);
 			newMessage(message, meta);
 		});
 
-		server.on('error', (err) => {
+		ws.on('error', (err) => {
 			upError(err, 1);
 		});
 
-		server.on('close', () => {
-			console['log']('CLOSE WS');
+		ws.on('close', () => {
+			console.log('CLOSE WS');
 		});
 	});
 
-	return server;
+	//return wss;
 };
 
 module.exports = {

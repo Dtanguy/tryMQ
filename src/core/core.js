@@ -1,4 +1,3 @@
-//var os = require('os');
 var Buffer = require('buffer').Buffer;
 var crypto = require('crypto');
 
@@ -11,10 +10,10 @@ var server = {};
 var errorCb;
 
 //Initialize a broker	
-const setup = function (id_, param_, errorCb_) {
+const setup = function (name, param_, errorCb_) {
 	errorCb = errorCb_;
 	param = param_
-	common.init(id_, upError, send);
+	common.init(name, upError, send);
 	common.setCo(true);
 
 	//Init all the server found in the config
@@ -25,11 +24,13 @@ const setup = function (id_, param_, errorCb_) {
 		}
 	}
 	if (param.portWS && param.brokerIpWS) {
-		var id = crypto.randomBytes(8).toString('hex');
-		server[id] = listenerWS.initWS(param.portWS, param.brokerIpWS, id, newMessage, upError);
+		listenerWS.initWS(param.portWS, param.brokerIpWS, '', newMessage, upError, (add) => {
+
+			server[add.id] = add.ws;
+		});
 	}
 
-	console['log']("Started " + common.id);
+	console.log("Started " + common.id());
 	loop();
 };
 
@@ -69,6 +70,7 @@ var Queue = {};
 function newMessage(message, meta) {
 
 	var data = common.incomingMsg(message, meta);
+	console.log(data);
 	if (!data) {
 		upError('Empty parse result', 0)
 		return;
@@ -76,7 +78,7 @@ function newMessage(message, meta) {
 
 	try {
 		// If it's me ?!
-		if (data.from == common.id) {
+		if (data.from == common.id()) {
 			console.warn("Speak to myself, something weird is going one");
 			return;
 		}
@@ -189,7 +191,6 @@ function newMessage(message, meta) {
 
 function propage(data) {
 	try {
-
 		var txt = JSON.stringify(data.d);
 		let msg = new Buffer.alloc(txt.length, txt);
 
@@ -288,9 +289,9 @@ module.exports = {
 	error: common.error,
 	warn: common.warn,
 	log: common.log,
-	name: common.name,
-	id: common.id,
-	ip: common.ip,
+	name: common.name(),
+	id: common.id(),
+	ip: common.ip(),
 	setLoop,
 	clients,
 	topics,

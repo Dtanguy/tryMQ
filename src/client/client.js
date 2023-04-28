@@ -3,17 +3,8 @@ const clientUDP = require('./clientUDP.js');
 const clientWS = require('./clientWS.js');
 const common = require('../common.js');
 
-
-//Golbal (default setting)
-var setting = {
-	brokerIp: '127.0.0.1',
-	port: 33333,
-	pswrd: ''
-};
-
+var setting = {};
 var set = false;
-
-//Network and subscribtion
 var client;
 var coCb, msCb, decoCb, errCb;
 var autoRecoTimeOut = 2000;
@@ -22,23 +13,24 @@ var lastPing = Date.now();
 var timeOut = 5000;
 
 //Initialize a client
-const setup = function (id, sett, coCb_, decoCb_, errCb_) {
-
-	set = true;
-	if (sett) {
-		if (sett.brokerIp) {
-			setting.brokerIp = sett.brokerIp;
+const setup = function (name, sett, coCb_, decoCb_, errCb_) {
+	if (!sett.type || !sett.brokerIp || !sett.port || !sett.pswrd) {
+		if (!sett.type) {
+			console.log('Error: missing ".type" configuration');
 		}
-		if (sett.port) {
-			setting.port = sett.port;
+		if (!sett.brokerIp) {
+			console.log('Error: missing ".brokerIp" configuration');
 		}
-		if (sett.pswrd) {
-			setting.pswrd = sett.pswrd
+		if (!sett.port) {
+			console.log('Error: missing ".port" configuration');
 		}
-		if (sett.type) {
-			setting.type = sett.type
+		if (!sett.pswrd) {
+			console.log('Error: missing ".pswrd" configuration');
 		}
+		process.exit(1);
 	}
+	setting = sett;
+	set = true;
 
 	//Set callback		
 	coCb = coCb_;
@@ -46,15 +38,16 @@ const setup = function (id, sett, coCb_, decoCb_, errCb_) {
 	decoCb = decoCb_;
 	errCb = errCb_;
 
-	common.init(id, errCb, send);
-	console.log('ID: ' + common.id);
+	common.init(name, errCb, send);
+
+	console.log('ID: ' + common.id());
 	lastPing = Date.now();
 	if (setting.type == 'UDP') {
-		console.log('Connecting to UDP' + setting.brokerIp + ':' + setting.port + ' .. ');
+		console.log('Connecting to UDP ' + setting.brokerIp + ':' + setting.port + ' .. ');
 		clientUDP.init(openCb, messageCb, closeCb, errCb);
 	} else if (setting.type == 'WS') {
-		console.log('Connecting to WS' + setting.brokerIp + ':' + setting.port + ' .. ');
-		clientWS.init(openCb, messageCb, closeCb, errCb);
+		console.log('Connecting to WS ' + setting.brokerIp + ':' + setting.port + ' .. ');
+		clientWS.init(openCb, messageCb, closeCb, errCb, setting.brokerIp, setting.port);
 	}
 
 	//Automatic reconnection
@@ -64,7 +57,7 @@ const setup = function (id, sett, coCb_, decoCb_, errCb_) {
 
 const openCb = function (address, port) {
 	common.setCo(true);
-	console.log('UDP: ' + address + ':' + port + ', Autentification..');
+	console.log('WS: ' + address + ':' + port + ', Autentification..');
 	common.publish('/login', { pswrd: setting.pswrd });
 	setTimeout(function () {
 		if (token == -1) {
@@ -76,6 +69,7 @@ const openCb = function (address, port) {
 
 const messageCb = function (message, remote) {
 	lastPing = Date.now();
+	console.log('Message received: ' + message)
 	var data = common.incomingMsg(message, remote);
 	if (!data) {
 		return;
@@ -94,10 +88,10 @@ const messageCb = function (message, remote) {
 		//common .publish('/CORE/ping', {});
 		publish('/CORE/ping', {});
 	}
-	if (data.topic == '/LOOP/change' && data.for && data.for == common.id) {
+	if (data.topic == '/LOOP/change' && data.for && data.for == common.id()) {
 		changeLoopFreq(data);
 	}
-	if (data.topic == '/CORE/exit' && data.for && data.for == common.id) {
+	if (data.topic == '/CORE/exit' && data.for && data.for == common.id()) {
 		process.exit(1);
 	}
 }
@@ -118,12 +112,12 @@ function send(data, txt) {
 
 function reconnect() {
 	if (set && !common.getCo()) {
-		setup(common.name, setting, coCb, decoCb, errCb);
+		setup(common.name(), setting, coCb, decoCb, errCb);
 	}
 	if ((Date.now() - lastPing) > timeOut) {
 		//common .warn('Timeout..');
 		errCb('Timeout..');
-		setup(common.name, setting, coCb, decoCb, errCb);
+		setup(common.name(), setting, coCb, decoCb, errCb);
 	}
 };
 
@@ -143,7 +137,7 @@ module.exports = {
 	publish,
 	subscribe: common.subscribe,
 	unsubscribe: common.unsubscribe,
-	name: common.name,
-	id: common.id,
-	ip: common.ip,
+	name: common.name(),
+	id: common.id(),
+	ip: common.ip(),
 };

@@ -1,10 +1,10 @@
 const WebSocket = require('ws');
 var client;
 
-const init = function (openCb, messageCb, closeCb, errorCb) {
-	client = new WebSocket('ws://');
+const init = function (openCb, messageCb, closeCb, errorCb, ip, port) {
+	client = new WebSocket('ws://' + ip + ':' + port);
 	client.on('open', () => {
-		openCb(client._socket.remoteAddress, client._socket.remotePort);
+		openCb(ip, port);
 	});
 	client.on('message', messageCb);
 	client.on('close', closeCb);
