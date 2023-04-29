@@ -12,6 +12,9 @@ var token = -1;
 var lastPing = Date.now();
 var timeOut = 5000;
 
+
+
+
 //Initialize a client
 const setup = function (name, sett, coCb_, decoCb_, errCb_) {
 	if (!sett.type || !sett.brokerIp || !sett.port || !sett.pswrd) {
@@ -51,7 +54,7 @@ const setup = function (name, sett, coCb_, decoCb_, errCb_) {
 	}
 
 	//Automatic reconnection
-	setInterval(reconnect, autoRecoTimeOut);
+	reconnect();
 };
 
 
@@ -110,14 +113,28 @@ function send(data, txt) {
 
 
 function reconnect() {
+	let reco = false;
 	if (set && !common.getCo()) {
-		setup(common.name(), setting, coCb, decoCb, errCb);
+		console.warn('Disconnected..');
+		reco = true;
 	}
 	if ((Date.now() - lastPing) > timeOut) {
-		//common .warn('Timeout..');
-		errCb('Timeout..');
-		setup(common.name(), setting, coCb, decoCb, errCb);
+		console.warn('Timeout..');
+		reco = true;
 	}
+
+	if (reco) {
+		lastPing = Date.now();
+		if (setting.type == 'UDP') {
+			console.log('Connecting to UDP ' + setting.brokerIp + ':' + setting.port + ' .. ');
+			clientUDP.init(openCb, messageCb, closeCb, errCb);
+		} else if (setting.type == 'WS') {
+			console.log('Connecting to WS ' + setting.brokerIp + ':' + setting.port + ' .. ');
+			clientWS.init(openCb, messageCb, closeCb, errCb, setting.brokerIp, setting.port);
+		}
+	}
+
+	setTimeout(reconnect, autoRecoTimeOut);
 };
 
 const disconnect = function () {
@@ -126,6 +143,7 @@ const disconnect = function () {
 };
 
 const publish = function (topic, msg) {
+	if (!msg) msg = {};
 	msg.token = token;
 	return common.publish(topic, msg);
 };

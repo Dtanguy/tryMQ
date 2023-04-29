@@ -25,7 +25,6 @@ const setup = function (name, param_, errorCb_) {
 	}
 	if (param.portWS && param.brokerIpWS) {
 		listenerWS.initWS(param.portWS, param.brokerIpWS, '', newMessage, upError, (add) => {
-
 			server[add.id] = add.ws;
 		});
 	}
@@ -203,7 +202,7 @@ function propage(data) {
 
 			if (clients[cli].id && clients[cli].type && server[clients[cli].id]) {
 				if (clients[cli].type == "udp") {
-					server[clients[cli].id].send(msg, 0, msg.length, clients[cli].port, clients[cli].address, function (err, bytes) {
+					server[clients[cli].id].send(msg, 0, msg.length, clients[cli].port, clients[cli].address, (err, bytes) => {
 						if (err) {
 							console.warn("UDP error, remove");
 							delete server[clients[cli].id];
@@ -212,7 +211,7 @@ function propage(data) {
 					});
 				} else if (clients[cli].type == "ws") {
 					if (server[clients[cli].id].readyState == 1) {
-						server[clients[cli].id].send(msg.toString(), function (err) {
+						server[clients[cli].id].send(msg.toString(), (err) => {
 							if (err) {
 								console.warn("Websocket error, remove");
 								delete server[clients[cli].id];

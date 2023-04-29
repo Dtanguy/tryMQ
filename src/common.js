@@ -51,7 +51,15 @@ const init = function (name_, errorCb_, sendCb_) {
 const incomingMsg = function (message, remote) {
 
 	//parse
-	var msg = JSON.parse(message);
+	var msg;
+	console.log(message);
+	try {
+		var msg = JSON.parse(message);
+	} catch (e) {
+		errorCb('Error in parsing message ' + e, 0);
+		return;
+	}
+
 	if (!msg.topic) {
 		errorCb('No topic', 0);
 		return;
@@ -116,6 +124,7 @@ const getCo = function () {
 
 //Publish messages
 const publish = function (topic, msg, add) {
+	console.log(msg);
 	if (!msg || !topic || !connected) {
 		return;
 	}
@@ -124,12 +133,14 @@ const publish = function (topic, msg, add) {
 		delete msg.port;
 		delete msg.address;
 		msg.topic = topic;
+		msg.timestamp = Date.now();
 		if (!add) {
 			msg.from = id;
 			msg.hostname = hostname;
 			msg.ip = ip;
 		}
 		var txt = JSON.stringify(msg);
+		console.log(txt);
 		//console.log(msg);
 		sendCb(msg, txt);
 	} catch (e) {

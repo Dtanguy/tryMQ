@@ -23,12 +23,11 @@ const initWS = function (portWS, brokerIp, id_, newMessage, upError, add) {
 				ip: ip,
 				port: portWS
 			};
-			console.log('meta.id: ' + meta.id);
 			newMessage(message, meta);
 		});
 
 		ws.on('error', (err) => {
-			upError(err, 1);
+			//upError(err, 1);
 		});
 
 		ws.on('close', () => {

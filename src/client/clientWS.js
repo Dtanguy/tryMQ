@@ -8,10 +8,15 @@ const init = function (openCb, messageCb, closeCb, errorCb, ip, port) {
 	});
 	client.on('message', messageCb);
 	client.on('close', closeCb);
-	client.on('error', errorCb);
+	client.on('error', () => {
+		//errorCb
+	});
 }
 
 function send(data, txt) {
+	if (client.readyState != 1) {
+		return;
+	}
 	client.send(txt);
 }
 
