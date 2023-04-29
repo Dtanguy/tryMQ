@@ -69,7 +69,6 @@ const openCb = function (address, port) {
 
 const messageCb = function (message, remote) {
 	lastPing = Date.now();
-	console.log('Message received: ' + message)
 	var data = common.incomingMsg(message, remote);
 	if (!data) {
 		return;
