@@ -1,68 +1,105 @@
-//var dgram = require('dgram');
 const clientUDP = require('./clientUDP.js');
 const clientWS = require('./clientWS.js');
-const common = require('../common.js');
+const utils = require('../utils.js');
 
-var setting = {};
-var set = false;
 var client;
-var coCb, msCb, decoCb, errCb;
+var coCb, msCb, errCb, decoCb;
 var autoRecoTimeOut = 2000;
 var token = -1;
 var lastPing = Date.now();
 var timeOut = 5000;
 
+var subscribed = {};
+var setting, name, id, hostname, ip;
+var connected = false;
 
 
+/***********************************************************************/
+/*                         SETUP & CONNECTION                          */
+/***********************************************************************/
 
-//Initialize a client
-const setup = function (name, sett, coCb_, decoCb_, errCb_) {
-	if (!sett.type || !sett.brokerIp || !sett.port || !sett.pswrd) {
-		if (!sett.type) {
-			console.log('Error: missing ".type" configuration');
-		}
-		if (!sett.brokerIp) {
-			console.log('Error: missing ".brokerIp" configuration');
-		}
-		if (!sett.port) {
-			console.log('Error: missing ".port" configuration');
-		}
-		if (!sett.pswrd) {
-			console.log('Error: missing ".pswrd" configuration');
-		}
+async function setup(name_, setting_, coCb_, decoCb_, errCb_) {
+	if (!setting_.type) {
+		console.log('Error: missing ".type" configuration');
 		process.exit(1);
 	}
-	setting = sett;
-	set = true;
+	if (!setting_.brokerIp) {
+		console.log('Error: missing ".brokerIp" configuration');
+		process.exit(1);
+	}
+	if (!setting_.port) {
+		console.log('Error: missing ".port" configuration');
+		process.exit(1);
+	}
+	if (!setting_.pswrd) {
+		console.log('Error: missing ".pswrd" configuration');
+		process.exit(1);
+	}
 
-	//Set callback		
+	setting = setting_;
+
 	coCb = coCb_;
-	//msCb = msCb_;
-	decoCb = decoCb_;
 	errCb = errCb_;
+	decoCb = decoCb_;
 
-	common.init(name, errCb, send);
+	name = name_
+	id = utils.setId(name);
+	let r = await utils.getLocalIp();
+	ip = r.ip;
+	hostname = r.hostname;
+	console.log('ID: ' + id + ' IP: ' + ip + ' Hostname: ' + hostname);
 
-	console.log('ID: ' + common.id());
+	connect();
+	setTimeout(reconnect, autoRecoTimeOut);
+};
+
+function connect() {
 	lastPing = Date.now();
 	if (setting.type == 'UDP') {
 		console.log('Connecting to UDP ' + setting.brokerIp + ':' + setting.port + ' .. ');
-		clientUDP.init(openCb, messageCb, closeCb, errCb);
+		client = clientUDP.init(openCb, messageCb, disconnected, errCb);
 	} else if (setting.type == 'WS') {
 		console.log('Connecting to WS ' + setting.brokerIp + ':' + setting.port + ' .. ');
-		clientWS.init(openCb, messageCb, closeCb, errCb, setting.brokerIp, setting.port);
+		client = clientWS.init(openCb, messageCb, disconnected, errCb, setting.brokerIp, setting.port);
 	}
+}
 
-	//Automatic reconnection
-	reconnect();
+function reconnect() {
+	if (connected == false) {
+		console.warn('Disconnected..');
+		connect();
+	}
+	if ((Date.now() - lastPing) > timeOut) {
+		console.warn('Timeout..');
+		connect();
+	}
+	setTimeout(reconnect, autoRecoTimeOut);
 };
 
+function disconnected() {
+	connected = false;
+	decoCb();
+}
 
-const openCb = function (address, port) {
-	common.setCo(true);
+
+/***********************************************************************/
+/*                            MESSAGE & COM                            */
+/***********************************************************************/
+
+function openCb(address, port) {
+	connected = true;
 	console.log('WS: ' + address + ':' + port + ', Autentification..');
-	common.publish('/login', { pswrd: setting.pswrd });
-	setTimeout(function () {
+	let toSend = {
+		topic: '/login',
+		token,
+		from: id,
+		hostname,
+		ip,
+		timestamp: Date.now(),
+		pswrd: setting.pswrd
+	};
+	send(toSend);
+	setTimeout(() => {
 		if (token == -1) {
 			console.log('Fail Auth.. Please verify password configuration');
 		}
@@ -70,10 +107,14 @@ const openCb = function (address, port) {
 	coCb();
 }
 
-const messageCb = function (message, remote) {
+function messageCb(message, remote) {
 	lastPing = Date.now();
-	var data = common.incomingMsg(message, remote);
-	if (!data) {
+	var data = utils.parseMsg(subscribed, message, remote);
+	if (!data) return;
+
+	// If it's me ?!
+	if (data.from == id) {
+		console.warn("Speak to myself, something weird is going one");
 		return;
 	}
 
@@ -82,79 +123,73 @@ const messageCb = function (message, remote) {
 		token = data.token;
 		console.log('Succes ! token : ' + data.token);
 		coCb();
-	}
-	if (data.topic == '/invalid') {
-		common.publish('/login', { pswrd: setting.pswrd });
-	}
-	if (data.topic == '/CORE/ping' && data.ask == true) {
+	} else if (data.topic == '/invalid') {
+		//publish('/login', { pswrd: setting.pswrd });
+		let toSend = {
+			topic: '/login',
+			token,
+			from: id,
+			hostname,
+			ip,
+			timestamp: Date.now(),
+			pswrd: setting.pswrd
+		};
+		send(toSend);
+	} else if (data.topic == '/CORE/ping' && data.ask == true) {
 		//common .publish('/CORE/ping', {});
 		publish('/CORE/ping', {});
-	}
-	if (data.topic == '/LOOP/change' && data.for && data.for == common.id()) {
+	} else if (data.topic == '/LOOP/change' && data.for && data.for == id) {
 		changeLoopFreq(data);
-	}
-	if (data.topic == '/CORE/exit' && data.for && data.for == common.id()) {
+	} else if (data.topic == '/CORE/exit' && data.for && data.for == id) {
 		process.exit(1);
 	}
 }
 
-const closeCb = function () {
-	decoCb();
+function publish(topic, msg) {
+	if (!msg || !topic || !connected || token == -1) return;
+	delete msg.port;
+	delete msg.address;
+	let toSend = {
+		topic,
+		token,
+		from: id,
+		hostname,
+		ip,
+		timestamp: Date.now(),
+		data: msg,
+	};
+	send(toSend);
 }
 
-//Specifique send instruction
-function send(data, txt) {
+function send(data) {
+	try {
+		var txt = JSON.stringify(data);
+	} catch (e) {
+		console.error(e)
+	};
 	if (setting.type == 'UDP') {
-		clientUDP.send(setting.brokerIp, setting.port, data, txt);
+		clientUDP.send(setting.brokerIp, setting.port, txt);
 	} else if (setting.type == 'WS') {
-		clientWS.send(data, txt);
+		clientWS.send(txt);
 	}
 }
 
+function subscribe(topic, callback) {
+	if (!topic || !callback) return;
+	subscribed[topic] = callback;
+}
 
-function reconnect() {
-	let reco = false;
-	if (set && !common.getCo()) {
-		console.warn('Disconnected..');
-		reco = true;
-	}
-	if ((Date.now() - lastPing) > timeOut) {
-		console.warn('Timeout..');
-		reco = true;
-	}
-
-	if (reco) {
-		lastPing = Date.now();
-		if (setting.type == 'UDP') {
-			console.log('Connecting to UDP ' + setting.brokerIp + ':' + setting.port + ' .. ');
-			clientUDP.init(openCb, messageCb, closeCb, errCb);
-		} else if (setting.type == 'WS') {
-			console.log('Connecting to WS ' + setting.brokerIp + ':' + setting.port + ' .. ');
-			clientWS.init(openCb, messageCb, closeCb, errCb, setting.brokerIp, setting.port);
-		}
-	}
-
-	setTimeout(reconnect, autoRecoTimeOut);
-};
-
-const disconnect = function () {
-	set = false;
-	client.close();
-};
-
-const publish = function (topic, msg) {
-	if (!msg) msg = {};
-	msg.token = token;
-	return common.publish(topic, msg);
-};
+function unsubscribe(topic) {
+	subscribed[topic] = '';
+}
 
 module.exports = {
 	setup,
-	disconnect,
+	disconnected,
 	publish,
-	subscribe: common.subscribe,
-	unsubscribe: common.unsubscribe,
-	name: common.name(),
-	id: common.id(),
-	ip: common.ip(),
+	subscribe,
+	unsubscribe,
+	name,
+	id,
+	ip,
 };

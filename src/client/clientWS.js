@@ -11,13 +11,14 @@ const init = function (openCb, messageCb, closeCb, errorCb, ip, port) {
 	client.on('error', () => {
 		//errorCb
 	});
+	return client;
 }
 
-function send(data, txt) {
-	if (client.readyState != 1) {
+function send(data) {
+	if (!client || client.readyState != 1) {
 		return;
 	}
-	client.send(txt);
+	client.send(data);
 }
 
 module.exports = {

@@ -3,43 +3,109 @@ var crypto = require('crypto');
 
 var listenerUDP = require('../core/listenerUDP.js');
 var listenerWS = require('../core/listenerWS.js');
-var common = require('../common.js');
+const utils = require('../utils.js');
 
-var param = {};
+var setting = {};
 var server = {};
 var errorCb;
 
-//Initialize a broker	
-const setup = function (name, param_, errorCb_) {
+var subscribed = {};
+var setting, name, id, hostname, ip;
+
+
+/***********************************************************************/
+/*                         SETUP & CONNECTION                          */
+/***********************************************************************/
+
+async function setup(name_, setting_, errorCb_) {
+	if (!setting_.pswrd) {
+		console.log('Error: missing ".pswrd" configuration');
+		process.exit(1);
+	}
+	if (!setting_.brokerIpUDP && !setting_.brokerIpWS) {
+		console.log('Error: missing ".brokerIp" configuration');
+		process.exit(1);
+	}
+	if (!setting_.portUDP && !setting_.portWS) {
+		console.log('Error: missing ".port" configuration');
+		process.exit(1);
+	}
+	setting = setting_;
+
 	errorCb = errorCb_;
-	param = param_
-	common.init(name, upError, send);
-	common.setCo(true);
+	name = name_
+	id = utils.setId(name);
+	let r = await utils.getLocalIp();
+	ip = r.ip;
+	hostname = r.hostname;
 
 	//Init all the server found in the config
-	if (param.portUDP && param.brokerIpUDP) {
-		for (i = 0; i < param.brokerIpUDP.length; i++) {
-			var id = crypto.randomBytes(8).toString('hex');
-			server[id] = listenerUDP.initUDP(param.portUDP, param.brokerIpUDP[i], id, newMessage, upError);
+	if (setting.portUDP && setting.brokerIpUDP) {
+		for (i = 0; i < setting.brokerIpUDP.length; i++) {
+			var id_ = crypto.randomBytes(8).toString('hex');
+			server[id_] = listenerUDP.initUDP(setting.portUDP, setting.brokerIpUDP[i], id, newMessage, upError);
 		}
 	}
-	if (param.portWS && param.brokerIpWS) {
-		listenerWS.initWS(param.portWS, param.brokerIpWS, '', newMessage, upError, (add) => {
+	if (setting.portWS && setting.brokerIpWS) {
+		listenerWS.initWS(setting.portWS, setting.brokerIpWS, '', newMessage, upError, (add) => {
 			server[add.id] = add.ws;
 		});
 	}
 
-	console.log("Started " + common.id());
+	console.log('Ready ID: ' + id + ' IP: ' + ip + ' Hostname: ' + hostname);
 	loop();
 };
 
 
-//Specifique send instruction
+
+/***********************************************************************/
+/*                            MESSAGE & COM                            */
+/***********************************************************************/
+
+function publish(topic, msg, add = false) {
+	if (!msg || !topic) {
+		return;
+	}
+
+	try {
+		delete msg.port;
+		delete msg.address;
+		msg.topic = topic;
+		msg.timestamp = Date.now();
+		if (!add) {
+			msg.from = id;
+			msg.hostname = hostname;
+			msg.ip = ip;
+		}
+
+		send(msg);
+	} catch (e) {
+		errorCb(e, 0);
+	}
+}
+
+function subscribe(topic, callback) {
+	if (!topic || !callback) return;
+	subscribed[topic] = callback;
+}
+
+function unsubscribe(topic) {
+	subscribed[topic] = '';
+}
+
 function send(data, txt) {
+	try {
+		var txt = JSON.stringify(data);
+	} catch (e) {
+		console.error(e)
+	};
 	Queue[data.topic] = { d: data, m: txt };
 };
 
-//Push to the upper level the error
+/***********************************************************************/
+/*                            CORE MECANICS                            */
+/***********************************************************************/
+
 function upError(err, code) {
 	if (!err) {
 		errorCb('Error, no error.. -_-"', 0);
@@ -49,9 +115,9 @@ function upError(err, code) {
 		errorCb(err, code);
 	} else {
 		if (code == 0) {
-			common.warn(err);
+			console.warn(err);
 		} else {
-			common.error(err);
+			console.error(err);
 		}
 	}
 };
@@ -67,21 +133,16 @@ var Queue = {};
 
 //login + mdp = token = identification
 function newMessage(message, meta) {
+	var data = utils.parseMsg(subscribed, message, meta);
+	if (!data) return;
 
-	var data = common.incomingMsg(message, meta);
-	console.log(data);
-	if (!data) {
-		upError('Empty parse result', 0)
+	// If it's me ?!
+	if (data.from == id) {
+		console.warn("Speak to myself, something weird is going one");
 		return;
 	}
 
 	try {
-		// If it's me ?!
-		if (data.from == common.id()) {
-			console.warn("Speak to myself, something weird is going one");
-			return;
-		}
-
 		// If it's the first time this client show
 		if (!clients[data.from]) {
 			clients[data.from] = {
@@ -135,11 +196,11 @@ function newMessage(message, meta) {
 		//Manage authentification
 		if (data.topic == '/login') {
 			if (data.pswrd && data.from) {
-				if (data.pswrd == param.pswrd) {
+				if (data.pswrd == setting.pswrd) {
 					var msg = {};
 					msg.token = crypto.randomBytes(8).toString('hex');
 					msg.for = data.from;
-					common.publish('/login', msg);
+					publish('/login', msg);
 					clients[data.from].token = msg.token;
 				}
 			}
@@ -147,12 +208,12 @@ function newMessage(message, meta) {
 		} else {
 			if (data.token == clients[data.from].token) {
 				delete data.token;
-				common.publish(data.topic, data, true);
+				publish(data.topic, data, true);
 			} else {
 				upError('INVALID TOKEN from ' + data.from + ' on ' + data.topic, 0)
 				var msg = {};
 				msg.for = data.from;
-				common.publish('/invalid', msg);
+				publish('/invalid', msg);
 			}
 		}
 
@@ -167,15 +228,15 @@ function newMessage(message, meta) {
 			case '/CORE/info':
 				msg.clients = clients;
 				msg.topics = topics;
-				common.publish('/CORE/info', msg);
+				publish('/CORE/info', msg);
 				break;
 			case '/CORE/clients':
 				msg.clients = clients;
-				common.publish('/CORE/clients', msg);
+				publish('/CORE/clients', msg);
 				break;
 			case '/CORE/topics':
 				msg.topics = topics;
-				common.publish('/CORE/topics', msg);
+				publish('/CORE/topics', msg);
 				break;
 			default:
 				return;
@@ -231,6 +292,7 @@ function propage(data) {
 	}
 };
 
+
 var pingTimeout = 4000;
 setInterval(() => {
 	for (var cli in clients) {
@@ -242,8 +304,9 @@ setInterval(() => {
 	var msg = {
 		ask: true
 	};
-	common.publish('/CORE/ping', msg);
+	publish('/CORE/ping', msg);
 }, pingTimeout);
+
 
 function loop() {
 	setTimeout(() => {
@@ -255,42 +318,37 @@ function loop() {
 	}, loopFreq);
 };
 
-const setLoop = function (delay) {
+function setLoop(delay) {
 	loopFreq = delay;
 };
 
-const resetClients = function () {
+function resetClients() {
 	clients = {};
 };
 
-const resetTopics = function () {
+function resetTopics() {
 	topics = {};
 };
 
-const reset = function () {
+function reset() {
 	clients = {};
 	topics = {};
 };
 
-const logOut = function (cli) {
+function logOut(cli) {
 	if (clients[cli]) {
 		client[cli].token = crypto.randomBytes(8).toString('hex');
 	}
 };
 
 
+
 module.exports = {
 	setup,
-	publish: common.publish,
+	publish,
+	subscribe,
+	unsubscribe,
 
-	subscribe: common.subscribe,
-	unsubscribe: common.unsubscribe,
-	error: common.error,
-	warn: common.warn,
-	log: common.log,
-	name: common.name(),
-	id: common.id(),
-	ip: common.ip(),
 	setLoop,
 	clients,
 	topics,
@@ -298,4 +356,7 @@ module.exports = {
 	resetTopics,
 	reset,
 	logOut,
+	name,
+	id,
+	ip,
 };

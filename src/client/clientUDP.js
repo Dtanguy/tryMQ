@@ -10,9 +10,10 @@ const init = function (openCb, messageCb, closeCb, errorCb) {
   client.on('close', closeCb);
   client.on('error', errorCb);
   client.bind();
+  return client;
 }
 
-function send(ip, port, data, txt) {
+function send(ip, port, txt) {
   var message = new Buffer.alloc(txt.length, txt);
   client.send(message, 0, message.length, port, ip, function (err, bytes) {
     //The message have been send
